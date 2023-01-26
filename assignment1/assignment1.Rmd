@@ -1,8 +1,10 @@
 ---
 title: "DATA607 Assignment 1"
 author: "Alice Ding"
-output: pdf_document
 date: "2023-01-26"
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
