@@ -10,23 +10,46 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Overview
 
-This is a data set holds all of the matches that world cup competitors participated in, their likelihood to win/lose/tie said match, and also specifies how likely each team will finish first or second in their group and eventually advance to the knockout stage. 
+This data set contains one row per match for the 2022 World Cup, the chance that each team will win, lose or tie every one of their matches, and each team's SPI (soccer performance index) as well as a projected score. The table also holds information regarding non-shot expected goals (xG) and then adjusted forecast numbers based on things that happened during the game.
 
-```{r wc_forecasts}
-wc_forecasts <- read.csv("~/Masters/DATA607/wc_forecasts.csv")
-summary(wc_forecasts)
+```{r wc_matches}
+wc_matches <- read.csv("wc_matches.csv")
+summary(wc_matches)
 ```
 
 ## Subset of Data
 
-I'm curious about South Korea in particular, so I'd like to see their journey throughout the world cup this past year, specifically regarding whether they'll make the quarters/semis/finals.
+I'm curious about South Korea in particular, so I'd like to see their journey throughout the world cup this past year. I'm only curious about what was predicted and what actually happened though, so details on unexpected goals adjusting predictions isn't relevant to me.
 
 ```{r subset}
+# import libraries
 library(dplyr)
-relevant_data <- subset(select(wc_forecasts, c('forecast_timestamp', 'team', 'group', 'spi', 'make_round_of_16', 'make_quarters', 'make_semis', 'make_final', 'win_league')), team=="South Korea")
-colnames(relevant_data)[colnames(relevant_data) == "spi"] = "soccer_power_index"
+library(scales)
+
+# choose relevant columns
+relevant_data <- subset(select(wc_matches, c('date', 'team1', 'team2', 'spi1', 'spi2', 'prob1', 'prob2', 'probtie', 'proj_score1', 'proj_score2', 'score1', 'score2')), team1=="South Korea" | team2=="South Korea")
+
+# rename spi to something more intuitive for folks who don't know about soccer
+colnames(relevant_data)[colnames(relevant_data) == "spi1"] = "soccer_power_index_team1"
+colnames(relevant_data)[colnames(relevant_data) == "spi2"] = "soccer_power_index_team2"
+
+# renaming the probabilities for better readability
+colnames(relevant_data)[colnames(relevant_data) == "prob1"] = "win_probability_team1"
+colnames(relevant_data)[colnames(relevant_data) == "prob2"] = "win_probability_team2"
+colnames(relevant_data)[colnames(relevant_data) == "probtie"] = "tie_probability"
+
+# renaming the scores for better readability
+colnames(relevant_data)[colnames(relevant_data) == "proj_score1"] = "projected_score_team1"
+colnames(relevant_data)[colnames(relevant_data) == "proj_score2"] = "projected_score_team2"
+colnames(relevant_data)[colnames(relevant_data) == "score1"] = "actual_score_team1"
+colnames(relevant_data)[colnames(relevant_data) == "score2"] = "actual_score_team2"
+
+# format the probability columns to percentages to make them easier to read
+relevant_data[6:8] <- sapply(relevant_data[6:8], function(x) percent(x, accuracy=0.01))
 relevant_data
 ```
 
 ## Conclusion
-We can see that South Korea was predicted to be somewhat successful and maybe get into quarterfinals from the first two games, but never really had a chance to win the league or even make the finals. It does look like they were unlikely to win their 11/28 game though, and them moving forward increased their chance of winning substantially, however they were knocked out in the next game and that ended their chance to win all together.
+We can see that South Korea only had a higher SPI than one of its competitors thorughout the tournament, however they performed decently well against the 4 other teams that they played. Their first game ended in a tie even though it was predicted for the other taem to win, second team they ended up losing despite having a higher SPI, third team they ended up winning at only a 16.66% probability, and they ultimately lost to Brazil 4 to 1 in the last match. 
+
+With this only being the 2022 match history, I'd be curious to expand this dataset to other years and also just work on seeing how accurate this model was overall. For South Korea in particular, only one of these games ended with the highest probability prediction being correct and that was the last game; is South Korea an outlier here or did all other teams also see unlikely wins/losses/ties? 
