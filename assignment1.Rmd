@@ -1,0 +1,32 @@
+---
+title: "Assignment 1"
+output: pdf_document
+date: "2023-01-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+This is a data set holds all of the matches that world cup competitors participated in, their likelihood to win/lose/tie said match, and also specifies how likely each team will finish first or second in their group and eventually advance to the knockout stage. 
+
+```{r wc_forecasts}
+wc_forecasts <- read.csv("~/Masters/DATA607/wc_forecasts.csv")
+summary(wc_forecasts)
+```
+
+## Subset of Data
+
+I'm curious about South Korea in particular, so I'd like to see their journey throughout the world cup this past year, specifically regarding whether they'll make the quarters/semis/finals.
+
+```{r subset}
+library(dplyr)
+relevant_data <- subset(select(wc_forecasts, c('forecast_timestamp', 'team', 'group', 'spi', 'make_round_of_16', 'make_quarters', 'make_semis', 'make_final', 'win_league')), team=="South Korea")
+colnames(relevant_data)[colnames(relevant_data) == "spi"] = "soccer_power_index"
+relevant_data
+```
+
+## Conclusion
+We can see that South Korea was predicted to be somewhat successful and maybe get into quarterfinals from the first two games, but never really had a chance to win the league or even make the finals. It does look like they were unlikely to win their 11/28 game though, and them moving forward increased their chance of winning substantially, however they were knocked out in the next game and that ended their chance to win all together.
