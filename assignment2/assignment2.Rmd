@@ -1,0 +1,24 @@
+---
+title: "Assignment 2"
+author: "Alice Ding"
+date: "2023-02-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(RMySQL)
+mysqlconnection = dbConnect(RMySQL::MySQL(),
+                            dbname='data607',
+                            host='127.0.0.1',
+                            port=3306,
+                            user='root',
+                            password='password')
+```
+
+## Table
+
+```{r movie_ratings}
+movie_ratings = dbGetQuery(mysqlconnection, "select * from movie_ratings;")
+summary(movie_ratings)
+print(movie_ratings)
+```
