@@ -2,12 +2,149 @@
 title: "Extra Credit"
 author: "Alice Ding"
 date: "2023-02-09"
+output: pdf_document
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ## Overview
 
+```{r setup, include=FALSE}
+library(dplyr)
+library(lubridate)
+library(anytime)
+```
+
+```{r import_data}
+weather_data <- read.csv("london_weather.csv")
+glimpse(weather_data)
+```
+
+The dataset I've chosen to use for this assignment is London weather data taken from Kaggle: https://www.kaggle.com/datasets/emmanuelfwerr/london-weather-data
+
+The description from the source:
+
+```The dataset featured below was created by reconciling measurements from requests of individual weather attributes provided by the European Climate Assessment (ECA). The measurements of this particular dataset were recorded by a weather station near Heathrow airport in London, UK.```
+
+The dataset seems to go from 1979 all the way to 2020 at a daily cadence and has values for cloud cover, sunshine, radiation, temperature, precipitation, pressure, and snow depth. Here are the definitions for each field:
+
+- date: recorded date of measurement - (int)
+- cloud_cover: cloud cover measurement in oktas - (float)
+- sunshine: sunshine measurement in hours (hrs) - (float)
+- global_radiation: irradiance measurement in Watt per square meter (W/m2) - (float)
+- max_temp: maximum temperature recorded in degrees Celsius (°C) - (float)
+- mean_temp: mean temperature in degrees Celsius (°C) - (float)
+- min_temp: minimum temperature recorded in degrees Celsius (°C) - (float)
+- precipitation: precipitation measurement in millimeters (mm) - (float)
+- pressure: pressure measurement in Pascals (Pa) - (float)
+- snow_depth: snow depth measurement in centimeters (cm) - (float)
+
+## Cleaning Up the Data
+
+Upon first glance, I'd like to reformat the `date` column so it's more readable.
+
+```{r date_cleanup}
+weather_data$date <- anydate(weather_data$date)
+glimpse(weather_data)
+```
+Looks good!
+
+## Window Functions
+
+I'll be using the `global_radiation` and `mean_temp` columns for the window function calculations.
+
+### Year to Date
+
+To add a YTD column here, I'll use `dplyr`.
+
+```{r ytd}
+## YTD for mean_temp
+ytd_mean_temp <- weather_data |>
+  mutate(year = year(date), day = date(date)) |>
+  group_by(year) |>
+  summarise(ytd_mean_temp = cummean(mean_temp)) |>
+  ungroup()
+
+weather_data$ytd_mean_temp <- ytd_mean_temp$ytd_mean_temp
+
+## YTD for global_radiation
+ytd_global_radiation <- weather_data |>
+  mutate(year = year(date), day = date(date)) |>
+  group_by(year) |>
+  summarise(ytd_global_radiation = cummean(global_radiation)) |>
+  ungroup()
+
+weather_data$ytd_global_radiation <- ytd_global_radiation$ytd_global_radiation
+
+## snapshot of data
+filter(weather_data
+       , (yday(date) > 363 | yday(date) < 8) 
+       & (year(date) == 1979 | year(date) == 1980))  |> 
+  select(date
+          , mean_temp
+          , ytd_mean_temp
+          , global_radiation
+          , ytd_global_radiation
+          )
+```
+After checking each of these calculations, it looks like both `ytd` columns seem to be taking a cumulative mean for each day and all the days before it and then the column resets every year. We can see this by looking at how the first 4 days of the year average day-by-day, then how 2000-01-01 resets the mean back to the first day when it hits a new year.
+
+### Rolling 6 Day Average
+
+I'll also be using `dplyr` for this and I'll also assume 6 day moving average means the average of the past 5 days and the current day. I also won't group this by year as we just want to compare a smaller period of time independent of date aggregation. This means that the only rows with less than 6 days worth of data will be the first 6 days in the dataset and the last 6 as well.
+
+```{r rolling}
+## Rolling 6 day average for mean_temp
+rolling_mean_temp <- weather_data |>
+  mutate(temp1 = lag(mean_temp, 0), 
+         temp2 = lag(mean_temp, 1),
+         temp3 = lag(mean_temp, 2),
+         temp4 = lag(mean_temp, 3),
+         temp5 = lag(mean_temp, 4),
+         temp6 = lag(mean_temp, 5)) %>%
+  summarise(
+    rolling_mean_temp = rowMeans(
+      cbind(temp1, temp2, temp3, temp4, temp5, temp6
+            ), na.rm = TRUE)
+    )
+  
+weather_data$rolling_average_mean_temp <- rolling_mean_temp$rolling_mean_temp
+
+## Rolling 6 day average for global_radiation
+rolling_global_radiation <- weather_data |>
+  mutate(temp1 = lag(global_radiation, 0), 
+         temp2 = lag(global_radiation, 1),
+         temp3 = lag(global_radiation, 2),
+         temp4 = lag(global_radiation, 3),
+         temp5 = lag(global_radiation, 4),
+         temp6 = lag(global_radiation, 5)) %>%
+  summarise(
+    rolling_global_radiation = rowMeans(
+      cbind(temp1, temp2, temp3, temp4, temp5, temp6
+            ), na.rm = TRUE)
+    )
+  
+weather_data$rolling_average_global_radiation <- rolling_global_radiation$rolling_global_radiation
+
+## snapshot of data
+filter(weather_data
+       , (yday(date) > 363 | yday(date) < 8) 
+       & (year(date) == 1979 | year(date) == 1980)) |> 
+  select(date
+         , mean_temp
+         , rolling_average_mean_temp
+         , ytd_mean_temp
+         , global_radiation
+         , rolling_average_global_radiation
+         , ytd_global_radiation
+         )
+```
+
+Just as a gut check, comparing these to the YTD calcs makes sense -- the first 6 days match up perfectly, but after that it begins to diverge as the 6 day rolling average drops days. We also see how this doesn't reset after the year ends -- it keeps going!
+
 ## Conclusion
+
+In terms of usefulness, the rolling average numbers likely are more helpful for temperature considering London is a city that experiences multiple seasons and ranges of temperature, therefore a year to date average doesn't really tell you what it's actually like to live there or what the temperature is on any day. A more useful approach would likely be a quarter to date average as seasons typically follow a quarterly schedule, at least for places like London (Q1 = Spring, Q2 = Summer, etc.). 
+
+The radiation numbers are interesting as this value seems to fluctuate a lot more from day-to-day. Upon further research, it seems that irradiance "is a measurement of solar power and is defined as the rate at which solar energy falls onto a surface." [(click for source)](https://www.3tier.com/en/support/solar-online-tools/what-are-units-solar-irradiance/). I would say that the rolling average numbers are likely more helpful here as well than the year to date average given how much it differs and also the strength of the sun changes due to the intensity of the sun changing depending on whether it's summer vs. winter.
+
+Further analysis could include looking at the `sunshine` field and seeing if there's a correlation between this and `global_radiation`, as well as just seeing how the different numbers relate to one another such as `sunshine` and `mean_temp`. Just based off of intuition, I would suspect that a higher `sunshine` value would mean higher `mean_temp`.
+
+Overall, I think I've just scratched the surface with a dataset like this and it could also be interesting to see it replicated for other cities or regions around the world. If the data were to back even further too, we could see how much climate change is affecting each season to verify if it's actually getting warmer over time.
