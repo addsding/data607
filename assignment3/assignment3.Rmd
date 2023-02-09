@@ -2,7 +2,9 @@
 title: "Assignment 3"
 author: "Alice Ding"
 date: "2023-02-06"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 ## Question 1 
 Using the 173 majors listed in fivethirtyeight.com’s College Majors dataset [https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/], provide code that identifies the majors that contain either "DATA" or "STATISTICS"
