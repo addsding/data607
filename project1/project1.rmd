@@ -2,7 +2,9 @@
 title: "Project1"
 author: "Alice Ding"
 date: "2023-02-13"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -37,8 +39,12 @@ Based on the data, we see that `|` is used as a separation indicator in the file
 
 ```{r data}
 # Get the data from tournamentinfo.txt
-chess_df <- read.delim(file = "tournamentinfo.txt", header = FALSE, sep="|")
-glimpse(chess_df)
+chess_df <- read.delim(
+  file=
+    "https://raw.githubusercontent.com/addsding/data607/main/project1/tournamentinfo.txt"
+  , header = FALSE, sep="|"
+  )
+head(chess_df, 10)
 ```
 
 We can see here that rows 1-4 are not necessary as they were just the headers, and then every other row after that with a bunch of dashes (`-`) are just filler. We can remove these.
@@ -59,6 +65,8 @@ chess_df_3 = chess_df[seq(0, nrow(chess_df), 2), ]
 ```
 
 Now we have two data frames to clean up -- let's start with `chess_df_2`
+
+### Part 1: Player Name, Total Points, Round Information
 
 ```{r chess_df_2}
 head(chess_df_2)
@@ -83,13 +91,13 @@ head(chess_df_2)
 Next, the round numbers should just have the `player_id` and not a W/L/D indication -- time to fix that. There may be nulls for those that aren't W/L/D, such as those that are H/B.
 
 ```{r chess_df_2_rounds}
-chess_df_2$round_1 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_1)
-chess_df_2$round_2 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_2)
-chess_df_2$round_3 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_3)
-chess_df_2$round_4 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_4)
-chess_df_2$round_5 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_5)
-chess_df_2$round_6 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_6)
-chess_df_2$round_7 <- gsub("[WDLHB]\\s+", '', chess_df_2$round_7)
+chess_df_2$round_1 <- gsub("[WDL]\\s+", '', chess_df_2$round_1)
+chess_df_2$round_2 <- gsub("[WDL]\\s+", '', chess_df_2$round_2)
+chess_df_2$round_3 <- gsub("[WDL]\\s+", '', chess_df_2$round_3)
+chess_df_2$round_4 <- gsub("[WDL]\\s+", '', chess_df_2$round_4)
+chess_df_2$round_5 <- gsub("[WDL]\\s+", '', chess_df_2$round_5)
+chess_df_2$round_6 <- gsub("[WDL]\\s+", '', chess_df_2$round_6)
+chess_df_2$round_7 <- gsub("[WDL]\\s+", '', chess_df_2$round_7)
 
 chess_df_2$round_1 <- gsub("[HB]\\s+", NA, chess_df_2$round_1)
 chess_df_2$round_2 <- gsub("[HB]\\s+", NA, chess_df_2$round_2)
@@ -121,6 +129,8 @@ We can see that `player_id`, `total_points`, and all the rounds are now numbers 
 
 Now, let's try to clean up `chess_df_3`.
 
+### Part 2: State, Pre-Rating
+
 ```{r chess_df_3}
 head(chess_df_3)
 ```
@@ -134,7 +144,9 @@ colnames(chess_df_3)[colnames(chess_df_3) == "V1"] = "state"
 # find "R: [number] in the string with the pre-rating
 chess_df_3$match <- sub(pattern = ".*(R:\\s+([0-9]+)).*", 
                 replacement = "\\1", x = chess_df_3$V2)
-# \\s+ because it seems like there are some cases where the data is formatted inconsistently (more than one space before the number)
+# \\s+ because it seems like there are some cases where 
+# the data is formatted inconsistently 
+# (more than one space before the number)
 
 # remove the "R: " part
 chess_df_3$pre_rating <- gsub("R:\\s+", '', chess_df_3$match)
@@ -156,12 +168,30 @@ chess_df_3 <- chess_df_3 |>
 chess_df_all <- merge(chess_df_2, chess_df_3, by = "player_id")
 
 # take only the relevant columns
-chess_df_all<- select(chess_df_all, player_id, player_name, state, total_points, pre_rating, round_1, round_2, round_3, round_4, round_5, round_6, round_7)
+chess_df_all<- select(
+  chess_df_all
+  , player_id
+  , player_name
+  , state
+  , total_points
+  , pre_rating
+  , round_1
+  , round_2
+  , round_3
+  , round_4
+  , round_5
+  , round_6
+  , round_7
+  )
 
 head(chess_df_all)
 ```
 
-We have 4/5 of the desired fields now! It's time to calculate average pre-rating chess of each person's opponents now. We can do this by pivoting the table by person with all the round numbers, appending that person's pre-rating, and then averaging.
+We have 4/5 of the desired fields now! It's time to calculate average pre-rating chess of each person's opponents now. 
+
+### Part 3: Average Opponent Pre-Rating
+
+To find the average opponent pre-rating, we can do this by pivoting the table by person with all the round numbers, appending the opponent's pre-rating, and then averaging all them.
 
 ```{r pre_rating}
 # create the pivot
@@ -174,7 +204,11 @@ round_pivot <- chess_df_all |>
   )
 
 # append the opponent's pre-rating 
-round_pivot <- left_join(round_pivot, select(chess_df_all, player_id, pre_rating), by=c('opponent_player_id' = 'player_id'))
+round_pivot <- left_join(
+  round_pivot
+  , select(chess_df_all, player_id, pre_rating)
+  , by=c('opponent_player_id' = 'player_id')
+  )
 
 # average the opponent's pre-rating by the player
 average_opponent_pre_rating <- round_pivot |>
@@ -189,10 +223,21 @@ Now that we have the average opponent pre-rating, it's time to append that to th
 
 ```{r final}
 # join the data frame with average_opponent_pre_rating to our original one
-chess_df_all <- merge(chess_df_all, select(average_opponent_pre_rating, player_id, average_opponent_pre_rating), by = "player_id")
+chess_df_all <- merge(
+  chess_df_all
+  , select(average_opponent_pre_rating, player_id, average_opponent_pre_rating)
+  , by = "player_id"
+  )
 
 # select only relevant columns for the final output
-chess_df_final <- select(chess_df_all, player_name, state, total_points, pre_rating, average_opponent_pre_rating)
+chess_df_final <- select(
+  chess_df_all
+  , player_name
+  , state
+  , total_points
+  , pre_rating
+  , average_opponent_pre_rating
+  )
 
 # write it all to a .csv
 write.csv(chess_df_final, "tournament.csv", row.names=TRUE)
@@ -202,4 +247,7 @@ head(tournament_final)
 
 The .csv has been created and then pulled from -- done!
 
+Note: I see that `average_opponent_pre_rating` is an integer in the example given, however I kept it a double as I personally think it's helpful to see some decimals. To round it though, it would be as simple as doing `tournament_final$average_opponent_pre_rating <- round(tournament_final$average_opponent_pre_rating)`.
+
 ## Conclusion
+This text file was definitely a little tricky to parse, but at the very least it was consistently formatted so it was able to end up in a data frame without too much work. With this file now, one could potentially set up a simple model to predict how many points a player is going to get with their pre-rating and the average pre-ratings of their opponents. It could also just generally be used to predict whether the player would win a match or not, as well as predict perhaps what their after-tournament rating is. These cleaning scripts could also be used again with a file formatted the same way if next year's results come out in the same fashion too.
