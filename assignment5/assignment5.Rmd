@@ -8,6 +8,20 @@ output: pdf_document
 ```{r setup, include=FALSE}
 library(tidyr)
 library(dplyr)
-data <- read.csv("https://raw.githubusercontent.com/addsding/data607/main/assignment5/data.csv")
 ```
 
+## Overview
+This data set includes information from two airlines: ALASKA and AM WEST. These two airlines have 6 destinations that they operate with and this data includes a count of flights that were on time and delayed for each of the 6 cities.
+
+```{r preview}
+data <- read.csv("https://raw.githubusercontent.com/addsding/data607/main/assignment5/data.csv")
+head(data)
+```
+
+## Tidying the Data
+Tidy data is data where:
+- Every columns is variable
+- Every row is an observation
+- Every cell is a single value
+
+We see that to start with, every row here contains two observations: `On Time` and `Delayed`. We first want to separate this into two rows in order to have clean data.
