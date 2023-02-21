@@ -1,0 +1,13 @@
+---
+title: "Assignment 5"
+author: "Alice Ding"
+date: "2023-02-21"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+data <- read.csv("https://raw.githubusercontent.com/addsding/data607/main/assignment5/data.csv")
+```
+
