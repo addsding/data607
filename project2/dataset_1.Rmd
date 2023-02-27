@@ -8,13 +8,11 @@ output: pdf_document
 ```{r setup, include=FALSE}
 library(tidyr)
 library(dplyr)
-library(ggplot2)
-library(scales)
 ```
 
 ## Overview
 
-This data has one row per student and includes the following columns:
+For this dataset, I'll be using the one I found for discussion 5. This data has one row per student and includes the following columns:
 
 - ID
 - Name
@@ -46,14 +44,10 @@ The data looks properly pivoted!
 
 ### Test and Term Number
 
-Next, we'll be removing the `test ` and `term.` words from the test and term number columns and then converting them to numbers. We'll also rename the column `test.number` to `test_number` for consistency.
+Next, we'll be reformatting `term_number` to remove the `.` and replace it with a space. We'll also rename the column `test.number` to `test_number` for consistency.
 
 ```{r clean_test_term}
-student_data_pivoted$test.number <- gsub("test ", "", student_data_pivoted$test.number)
-student_data_pivoted$test.number <- as.numeric(as.character(student_data_pivoted$test.number))
-
-student_data_pivoted$term_number <- gsub("term\\.", "", student_data_pivoted$term_number)
-student_data_pivoted$term_number <- as.numeric(as.character(student_data_pivoted$term_number))
+student_data_pivoted$term_number <- gsub("\\.", " ", student_data_pivoted$term_number)
 
 student_data_pivoted <- student_data_pivoted |> rename("test_number" = "test.number")
 

@@ -1,0 +1,83 @@
+---
+title: "Project 2, Dataset 2"
+author: "Alice Ding"
+date: "2023-02-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+## Overview
+
+For this dataset, I'll be using the first one posted by Waheeb. This data has one row per date and includes the following columns:
+
+- Date
+- Product Line 1
+- Product Line 2
+- Product Line 3
+
+The last three columns are dollar values.
+
+```{r preview}
+product_data <- read.csv("https://raw.githubusercontent.com/addsding/data607/main/project2/product-lines.csv")
+head(product_data)
+```
+
+Our goal is to flatten this table to be one row per date and product line number combination before beginning analysis.
+
+## Tidying the Data
+
+To clean this data frame, we'll be pivoting it.
+
+```{r pivot}
+product_data_pivot <- pivot_longer(product_data, cols=2:4, names_to="product_line", values_to="sales")
+head(product_data_pivot)
+```
+
+The pivot has worked, but I'll want to reformat the `product_line` column to just be an int to represent each product line. The `Date` column also should be changed into an actual date.
+
+```{r reformat}
+product_data_pivot$product_line <- gsub("\\.", " ", product_data_pivot$product_line)
+
+product_data_pivot$Date <- as.Date(product_data_pivot$Date,
+  format = "%m/%d/%y")
+
+head(product_data_pivot)
+```
+
+Looks good, time to analyze!
+
+## Analysis
+
+To begin, we can find the stats for sales for each product line.
+
+```{r sales}
+sales <- product_data_pivot |> 
+  group_by(product_line) |>
+  summarise(mean_sales = mean(sales),
+            median_sales = median(sales),
+            min_sales = min(sales),
+            max_sales = max(sales),
+            .groups = 'drop')
+
+sales
+```
+
+On average, product line 3 seems to be doing the best as on average, it has sales of \$2,500+. Product line 2 isn't that far behind at \$2,450, while product line 1 seems to trail behind at only \$1,700. We can see though that product line 3 has a pretty large range of sales from \$850 to \$5,000 -- could this be due to seasonality?
+
+```{r time_series}
+product_time_series <- ggplot(product_data_pivot, aes(x=Date, y=sales, color=product_line)) +
+  geom_line() + 
+  xlab("")
+product_time_series
+```
+
+When looking at this data over time, it tells a very different story. Product line 2 seems to be growing a lot while product line 3 has not been doing so well, really tanking in sales for the first quarter of the year. Product line 1 was relatively consistent after a pretty huge drop from January to February, however seems to be bouncing back as of June.
+
+## Conclusion
+
+Overall, this data was relatively simple to clean and the findings were pretty straight-forward. One piece of information that I think is super important here though is supply as well as overall price of each product line -- we can't really compare the performance of each product line without knowing how much each unit costs as well as how much was actually produced. If for example, product line 1 just is priced at a lower tier and had less units made, its performance would actually be more impressive if product line 3 was over-produced and was at a much higher price point. To continue with this analysis, we'd definitely need more data points to fully gage how well each product line is performing.
