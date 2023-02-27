@@ -1,0 +1,133 @@
+---
+title: "Project 2, Dataset 1"
+author: "Alice Ding"
+date: "2023-02-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(scales)
+```
+
+## Overview
+
+This data has one row per student and includes the following columns:
+
+- ID
+- Name
+- Phone
+- Sex and age
+- Test number
+- Term 1 
+- Term 2
+- Term 3
+
+```{r preview}
+student_data <- read.csv("https://gist.githubusercontent.com/Kimmirikwa/b69d0ea134820ea52f8481991ffae93e/raw/4db7b1698035ee29885d10e1a59bd902716ae168/student_results.csv")
+head(student_data)
+```
+
+Ideally, we flatten this table to be one row per student, test, and term number rather than having columns for term scores. Additionally, the `sex and age` column should be split into two columns. Lastly, I would prefer if the `test number` column was just an int value rather than a chr with the word `test` in front of each number, and I'll do the same to term as it'll also end up being like `term number` at first.
+
+## Tidying the Data
+
+### One Row per Observation
+
+To start, let's pivot the data to make one row per observation.
+
+```{r pivot}
+student_data_pivoted <- pivot_longer(student_data, cols=6:8, names_to="term_number", values_to="test_score")
+head(student_data_pivoted)
+```
+The data looks properly pivoted!
+
+### Test and Term Number
+
+Next, we'll be removing the `test ` and `term.` words from the test and term number columns and then converting them to numbers. We'll also rename the column `test.number` to `test_number` for consistency.
+
+```{r clean_test_term}
+student_data_pivoted$test.number <- gsub("test ", "", student_data_pivoted$test.number)
+student_data_pivoted$test.number <- as.numeric(as.character(student_data_pivoted$test.number))
+
+student_data_pivoted$term_number <- gsub("term\\.", "", student_data_pivoted$term_number)
+student_data_pivoted$term_number <- as.numeric(as.character(student_data_pivoted$term_number))
+
+student_data_pivoted <- student_data_pivoted |> rename("test_number" = "test.number")
+
+head(student_data_pivoted)
+```
+
+Perfect!
+
+### Sex and Age Split
+
+Next, we'll split the `sex and age` column as it's currently formatted as `[sex]_[age]`. We'd want separate columns for this situation, one for `sex` and the other for `age`. We'd also want `age` to be numeric.
+
+```{r split_sex_age}
+student_data_pivoted <- student_data_pivoted |> separate_wider_delim(sex.and.age, delim="_", names = c("sex", "age"))
+student_data_pivoted$age <- as.numeric(as.character(student_data_pivoted$age))
+
+head(student_data_pivoted)
+```
+
+The data looks clean for analysis now!
+
+## Analysis
+
+### Class Breakdown
+
+First, let's look at the breakdown of this class by sex and age.
+
+```{r class_breakdown}
+student_by_sex_age <- student_data_pivoted |> 
+  group_by(sex) |>
+  summarise(mean_age = mean(age),
+            student_count = n_distinct(id),
+            max_age = max(age),
+            min_age = min(age),
+            .groups = 'drop')
+
+student_by_sex_age
+```
+We can see that there are more females in this class at 3 vs. 2 and the average age for females is a little higher than males at 13 vs. 11.5. The distribution of ages is also different as females go from 12 to 14 while males only range from 11 to 12. Now, how did each group do in terms of test scores?
+
+### Test Performance
+
+We'll look at overall average per term, then break it down by sex and age.
+
+```{r term_averages}
+term_averages <- student_data_pivoted |> 
+  group_by(term_number) |>
+  summarise(mean_test_score = mean(test_score),
+            median_test_score = median(test_score),
+            min_test_score = min(test_score),
+            max_test_score = max(test_score),
+            .groups = 'drop')
+
+term_averages
+```
+
+On average, students performed best in term 2, however the median test score in term 3 was higher. There was more variance in term 3 as the range is from 63 to 94 while the other terms were a little closer in score, signalling that there was a lot more variance in term 3.
+
+Now, does sex affect how well students do?
+
+```{r sex_averages}
+sex_averages <- student_data_pivoted |> 
+  group_by(sex) |>
+  summarise(mean_test_score = mean(test_score),
+            median_test_score = median(test_score),
+            min_test_score = min(test_score),
+            max_test_score = max(test_score),
+            .groups = 'drop')
+
+sex_averages
+```
+
+On average, it looks like males perform better than females from these test scores. The females have the highest test score as well as the lowest one though, signalling that they have the most variance in the group. However, remembering that there are only 2 males and 3 females in this class, it's hard to say whether this data is conclusive enough to extrapolate any meaning outside this one set of students. 
+
+## Conclusion
+
+Using `tidyr`, it was pretty simple to pivot and split columns based on delimiters which was what this data needed in order to get tidy. Upon doing that, using `dplyr` to help summarise is getting easier with each dataset I work with. The findings of this analysis aren't super interesting due to the small sample size, however the code can be recycled if given a dataset of more students for more than one year's worth of data in order to find overall averages and perhaps even trends to see if the course is seemingly getting harder or easier.
