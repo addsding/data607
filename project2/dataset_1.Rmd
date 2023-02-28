@@ -2,7 +2,10 @@
 title: "Project 2, Dataset 1"
 author: "Alice Ding"
 date: "2023-02-27"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +15,7 @@ library(dplyr)
 
 ## Overview
 
-For this dataset, I'll be using the one I found for discussion 5. This data has one row per student and includes the following columns:
+For this dataset, I'll be using the one I found and it represents test score data. This data has one row per student and includes the following columns:
 
 - ID
 - Name
@@ -28,7 +31,7 @@ student_data <- read.csv("https://gist.githubusercontent.com/Kimmirikwa/b69d0ea1
 head(student_data)
 ```
 
-Ideally, we flatten this table to be one row per student, test, and term number rather than having columns for term scores. Additionally, the `sex and age` column should be split into two columns. Lastly, I would prefer if the `test number` column was just an int value rather than a chr with the word `test` in front of each number, and I'll do the same to term as it'll also end up being like `term number` at first.
+Ideally, we flatten this table to be one row per student, test, and term number rather than having columns for term scores. Additionally, the `sex and age` column should be split into two columns.
 
 ## Tidying the Data
 
@@ -37,7 +40,9 @@ Ideally, we flatten this table to be one row per student, test, and term number 
 To start, let's pivot the data to make one row per observation.
 
 ```{r pivot}
-student_data_pivoted <- pivot_longer(student_data, cols=6:8, names_to="term_number", values_to="test_score")
+student_data_pivoted <- pivot_longer(
+  student_data, cols=6:8, names_to="term_number", values_to="test_score"
+  )
 head(student_data_pivoted)
 ```
 The data looks properly pivoted!
@@ -61,7 +66,9 @@ Perfect!
 Next, we'll split the `sex and age` column as it's currently formatted as `[sex]_[age]`. We'd want separate columns for this situation, one for `sex` and the other for `age`. We'd also want `age` to be numeric.
 
 ```{r split_sex_age}
-student_data_pivoted <- student_data_pivoted |> separate_wider_delim(sex.and.age, delim="_", names = c("sex", "age"))
+student_data_pivoted <- student_data_pivoted |> 
+  separate_wider_delim(sex.and.age, delim="_", names = c("sex", "age"))
+
 student_data_pivoted$age <- as.numeric(as.character(student_data_pivoted$age))
 
 head(student_data_pivoted)
@@ -104,9 +111,9 @@ term_averages <- student_data_pivoted |>
 term_averages
 ```
 
-On average, students performed best in term 2, however the median test score in term 3 was higher. There was more variance in term 3 as the range is from 63 to 94 while the other terms were a little closer in score, signalling that there was a lot more variance in term 3.
+On average, students performed best in term 2, however the median test score in term 3 was higher. It seems there was more variance in term 3 as the range is from 63 to 94 while the other terms were a little closer in score.
 
-Now, does sex affect how well students do?
+Now, does sex affect how well the students did?
 
 ```{r sex_averages}
 sex_averages <- student_data_pivoted |> 

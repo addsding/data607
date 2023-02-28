@@ -1,0 +1,82 @@
+---
+title: "Project 2, Dataset 3"
+author: "Alice Ding"
+date: "2023-02-27"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(formattable)
+```
+
+## Overview
+
+For this dataset, I'll be using the first one posted by Farhana and it holds vote counts for two states. This data has one row per political candidate and includes the following columns:
+
+- Candidate
+- CA
+- FL
+
+The last 2 columns are vote counts for those states.
+
+```{r preview}
+vote_data <- read.csv("https://raw.githubusercontent.com/addsding/data607/main/project2/vote-counts.csv")
+head(vote_data)
+```
+
+To get this data tidy, we'll be pivoting the last two columns to have one column per candidate and state combination.
+
+## Tidying the Data
+
+Pivot time!
+
+```{r pivot}
+vote_data_pivot <- pivot_longer(vote_data, cols=2:3, names_to="state", values_to="votes")
+head(vote_data_pivot)
+```
+
+Data looks good, no other cleaning necessary!
+
+## Analysis
+
+Overall, who has the most votes? And what percentage of votes did they get?
+
+```{r vote_count}
+votes <- vote_data_pivot |> 
+  group_by(Candidate) |>
+  summarise(sum_votes = sum(votes),
+            .groups = 'drop') |>
+  mutate(freq = formattable::percent(sum_votes / sum(sum_votes)))
+
+votes
+```
+
+From this summary, it looks like Hilary Clinton had the most votes at 54.97% for CA and FL with Donald Trump in 2nd place at 41.11%. Does this change if we group by state as well?
+
+```{r state_vote_count, error=TRUE}
+cali_votes <- vote_data_pivot[vote_data_pivot$state=="CA",] |> 
+  group_by(Candidate) |>
+  summarise(sum_votes = sum(votes),
+            .groups = 'drop') |>
+  mutate(freq = formattable::percent(sum_votes / sum(sum_votes)))
+
+cali_votes
+
+fl_votes <- vote_data_pivot[vote_data_pivot$state=="FL",] |> 
+  group_by(Candidate) |>
+  summarise(sum_votes = sum(votes),
+            .groups = 'drop') |>
+  mutate(freq = formattable::percent(sum_votes / sum(sum_votes)))
+
+fl_votes
+```
+
+By state, Clinton is very much the majority in CA. in FL however, it's much closer with Trump actually taking the lead. This makes sense as FL tends to lean more Republican while CA is very much a Democratic state.
+
+## Conclusion
+
+With the help of pivoting, this data was easy to tidy up and then analyze with `dplyr`. It would be more interesting to see other states' voting data as well as perhaps what percentage of the state is in which political party to see if the votes lined up with affiliation. It'd also be interesting to see the percentage of folks who didn't vote if possible and see how that swung the outcome of this election in another analysis.

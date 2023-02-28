@@ -2,7 +2,9 @@
 title: "Project 2, Dataset 2"
 author: "Alice Ding"
 date: "2023-02-27"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -13,7 +15,7 @@ library(ggplot2)
 
 ## Overview
 
-For this dataset, I'll be using the first one posted by Waheeb. This data has one row per date and includes the following columns:
+For this dataset, I'll be using the first one posted by Waheeb and it represents sales data for different product lines based on a specific date. This data has one row per date and includes the following columns:
 
 - Date
 - Product Line 1
@@ -34,11 +36,13 @@ Our goal is to flatten this table to be one row per date and product line number
 To clean this data frame, we'll be pivoting it.
 
 ```{r pivot}
-product_data_pivot <- pivot_longer(product_data, cols=2:4, names_to="product_line", values_to="sales")
+product_data_pivot <- pivot_longer(
+  product_data, cols=2:4, names_to="product_line", values_to="sales"
+  )
 head(product_data_pivot)
 ```
 
-The pivot has worked, but I'll want to reformat the `product_line` column to just be an int to represent each product line. The `Date` column also should be changed into an actual date.
+The pivot has worked! There are however periods instead of spaces in the `product_line` column so we'll replace those. Also, the `Date` column also should be changed into an actual date.
 
 ```{r reformat}
 product_data_pivot$product_line <- gsub("\\.", " ", product_data_pivot$product_line)
@@ -80,4 +84,4 @@ When looking at this data over time, it tells a very different story. Product li
 
 ## Conclusion
 
-Overall, this data was relatively simple to clean and the findings were pretty straight-forward. One piece of information that I think is super important here though is supply as well as overall price of each product line -- we can't really compare the performance of each product line without knowing how much each unit costs as well as how much was actually produced. If for example, product line 1 just is priced at a lower tier and had less units made, its performance would actually be more impressive if product line 3 was over-produced and was at a much higher price point. To continue with this analysis, we'd definitely need more data points to fully gage how well each product line is performing.
+Overall, this data was relatively simple to clean and the findings were pretty straight-forward. Two piece of informations that I think are super important here though is supply as well as overall price of each product line -- we can't really compare the performance of each product line without knowing how much each unit costs as well as how much was actually produced. If for example, product line 1 is priced at a lower tier and had less units made, its performance would actually be more impressive if product line 3 was over-produced and was at a much higher price point. To continue with this analysis, we'd definitely need these data points at the very least to fully gage how well each product line is performing.
