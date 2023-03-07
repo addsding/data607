@@ -39,3 +39,11 @@ Let's work on getting these into dataframes!
 html_df <- as.data.frame(read_html(html) |> html_table(fill=TRUE))
 head(html_df)
 ```
+
+Looks pretty good! One of the column names though has a period rather than a space/underscore -- let's change that! 
+
+```{r clean_html}
+html_df <- html_df |> rename("Publish_Year" = "Publish.Year")
+head(html_df)
+```
+
