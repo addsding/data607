@@ -2,7 +2,9 @@
 title: "Week 7 Assignment"
 author: "Alice Ding"
 date: "2023-03-07"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -56,7 +58,7 @@ Seems relatively clean! For the `Author` column, we can try splitting that into 
 
 ```{r html_split_author}
 html_df <- html_df |> 
-  separate_wider_delim(Author, delim=",", names = c("Author_1", "Author_2"), too_few = "align_start")
+  separate_wider_delim(Author, delim=", ", names = c("Author_1", "Author_2"), too_few = "align_start")
 
 head(html_df)
 ```
@@ -97,13 +99,41 @@ Awesome, XML next.
 
 ### XML
 
-I'll be using the `xml2` package for this portion of the assignment.
+I'll be using the `xml2` and `tibble` packages for this portion of the assignment.
 
 ```{r xml}
 # get the XML
-xml_list <- read_xml(xml)
+xml_books <- read_xml(xml)
 
+# pull each column
+title <- xml_text(xml_find_all(xml_books, xpath = "//title"))
+author <- xml_text(xml_find_all(xml_books, xpath = "//author"))
+year <- xml_text(xml_find_all(xml_books, xpath = "//publishYear"))
+genre <- xml_text(xml_find_all(xml_books, xpath = "//genre"))
+synopsis <- xml_text(xml_find_all(xml_books, xpath = "//synopsis"))
 
+# turn it into a df; for author, it seems that we have to append the 2nd author for the third book separately
+xml_df <- tibble(title = title
+                 , author_1 = author[1:3]
+                 , publish_year = year
+                 , genre = genre
+                 , synopsis = synopsis
+                 )
+author_2 <- c(NA, NA, author[4])
+xml_df$author_2 <- author_2
 
+head(xml_df)
 
 ```
+
+Looks perfect!
+
+## Conclusion
+
+With these methods, I would say the data frames are basically the same due to my own manipulation. From the start, the data frames were certainly not exactly the same. For example, I do see now that the XML method does not make `publish_year` an int, however the data could be cleaned up a little more for sure to get things correct. The order of the columns is also not the same for XML due to how I structured it. I think ultimately, most fields would be imported into a similar data frame, it's just lists that make things complicated too as well as object types.
+
+Working with each data structure, I found HTMl to be the easiest to work with due to the simplicity of the package and the fact that it kind of already starts as a table to begin with anyway. JSON and XML are similar in nature with how they're structured and how they're created, but the packages vary in difficulty to use overall. 
+
+I think the code I've written can be reworked for multiple books with more fields as well for JSON and HTML, however the way I implemented the XML variation makes it a little more work if there are more columns to work with. It's also very much not repeatable if the books I had were in a different order -- I would have to rewrite it to fit my use case depending on the data presented.
+
+Overall, I found this exercise to be interesting and fun in its own way as I got to work with different data structures and found a way to make the same three data frames!
