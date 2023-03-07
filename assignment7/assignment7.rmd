@@ -9,6 +9,9 @@ output: html_document
 library(tidyr)
 library(dplyr)
 library(rvest)
+library(jsonlite)
+library(xml2)
+library(tibble)
 ```
 
 ## Overview
@@ -35,6 +38,8 @@ Let's work on getting these into dataframes!
 
 ### HTML
 
+I'll be using the `rvest` package for this portion of the assignment.
+
 ```{r html}
 html_df <- as.data.frame(read_html(html) |> html_table(fill=TRUE))
 head(html_df)
@@ -47,3 +52,58 @@ html_df <- html_df |> rename("Publish_Year" = "Publish.Year")
 head(html_df)
 ```
 
+Seems relatively clean! For the `Author` column, we can try splitting that into 2 columns just so two authors aren't in one column for the third book.
+
+```{r html_split_author}
+html_df <- html_df |> 
+  separate_wider_delim(Author, delim=",", names = c("Author_1", "Author_2"), too_few = "align_start")
+
+head(html_df)
+```
+
+Looks good! Let's move onto `json`.
+
+### JSON
+
+I'll be using the `jsonlite` package for this portion of the assignment.
+
+```{r json}
+json_df <- jsonlite::fromJSON(json)
+json_df <- as.data.frame(json_df)
+head(json_df)
+```
+
+For the `author` column, the third book causes it to be a list since there are two authors. Let's try to split that column into two to match the HTML data frame.
+
+```{r json_split_author}
+json_df <- json_df |> unnest_wider(books.author, names_sep="author")
+head(json_df)
+```
+
+Looks perfect! Now just clean up the column names and it should be good to go.
+
+```{r clean_json}
+json_df <- json_df |> rename("title" = "books.title",
+                             "author_1" = "books.authorauthor1",
+                             "author_2" = "books.authorauthor2",
+                             "publish_year" = "books.publishYear",
+                             "genre" = "books.genre",
+                             "synopsis" = "books.synopsis"
+                             )
+head(json_df)
+```
+
+Awesome, XML next.
+
+### XML
+
+I'll be using the `xml2` package for this portion of the assignment.
+
+```{r xml}
+# get the XML
+xml_list <- read_xml(xml)
+
+
+
+
+```

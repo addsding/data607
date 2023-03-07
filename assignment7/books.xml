@@ -2,7 +2,7 @@
     <book id="1">
         <title>Pachinko</title>
         <author>
-            <author1>Min Jin Lee</author1>
+            <aut>Min Jin Lee</aut>
         </author>
         <publishYear>2017</publishYear>
         <genre>Fiction</genre>
@@ -11,7 +11,7 @@
     <book id="2">
         <title>The Joy Luck Club</title>
         <author>
-            <author1>Amy Tan</author1>
+            <aut>Amy Tan</aut>
         </author>
         <publishYear>2006</publishYear>
         <genre>Fiction</genre>
@@ -20,8 +20,8 @@
     <book id="3">
         <title>Punching the Air</title>
         <author>
-            <author1>Ibi Zoboi</author1>
-            <author2>Yusef Salaam</author2>
+            <aut>Ibi Zoboi</aut>
+            <aut>Yusef Salaam</aut>
         </author>
         <publishYear>2020</publishYear>
         <genre>Fiction</genre>
