@@ -1,0 +1,13 @@
+---
+title: "Week 7 Assignment"
+author: "Alice Ding"
+date: "2023-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
