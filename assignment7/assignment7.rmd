@@ -8,6 +8,34 @@ output: html_document
 ```{r setup, include=FALSE}
 library(tidyr)
 library(dplyr)
-library(ggplot2)
+library(rvest)
 ```
 
+## Overview
+
+I've picked 3 fiction books, each written by people of color and telling stories from their own personal lens. These brings different cultures through the authors' own personal experiences, but each story is inherently American in nature as well. 
+
+I've put the following information in `html`, `xml`, and `json` formats:
+
+- Title
+- Author(s)
+- Publish Year
+- Genre
+- Synopsis
+
+```{r urls}
+html <- "https://github.com/addsding/data607/raw/main/assignment7/books.html"
+xml <- "https://github.com/addsding/data607/raw/main/assignment7/books.xml"
+json <- "https://github.com/addsding/data607/raw/main/assignment7/books.json"
+```
+
+Let's work on getting these into dataframes!
+
+## Extracting the Data
+
+### HTML
+
+```{r html}
+html_df <- as.data.frame(read_html(html) |> html_table(fill=TRUE))
+head(html_df)
+```
