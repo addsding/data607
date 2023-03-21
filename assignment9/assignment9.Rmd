@@ -1,0 +1,58 @@
+---
+title: "Assignment 9"
+author: "Alice Ding"
+date: "2023-03-21"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+```{r, include=FALSE}
+library(httr)
+library(jsonlite)
+```
+
+## Overview
+
+Given the list of APIs found [here](https://developer.nytimes.com/apis), I've chosen to look at the [most popular](https://developer.nytimes.com/docs/most-popular-product/1/overview) one and specifically picked the one that shows the most viewed articles for the last seven days. 
+
+```{r fetch_data}
+api_link <- "https://api.nytimes.com/svc/mostpopular/v2/viewed/7.json?api-key="
+
+data <- GET(paste(api_link, Sys.getenv("key"), sep=""))
+```
+Note: I've stored my `api-key` in a system environment variable called `key`. In order to replicate this .rmd, you would need to set your own key in that variable as well before running all of the code chunks.
+
+## JSON -> Data Frame
+
+Using `jsonlite`, let's try to turn this into a dataframe.
+
+```{r data_frame}
+d <- fromJSON(rawToChar(data$content)) # convert raw unicode
+json_df <- as.data.frame(d$results) # pull the results into a data frame
+head(json_df, 3)
+```
+
+Looks like we got it in a dataframe!
+
+Just as a quick peek, what sections are most popular according to this dataset? 
+
+```{r section}
+library(dplyr)
+
+sections <- json_df |> 
+  group_by(section) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+head(sections, 10)
+```
+
+Looks like U.S. news is the most popular with 6 of the top articles!
+
+## Conclusion & Next Steps
+
+The API call fetches a bit more than the request calls for, but once getting into the `results` JSON, things were simple enough to get into a dataframe. The next steps would definitely be to clean this table up and maybe create a relational database structure to connect things like `media` (currently just an array/list of pictures in each article) as well as the different `geo_facet` values it could have. 
+
+One thing I would've liked to have known is how popular is one article over another. I'm not sure how popular each publication is, however maybe they purposefully left that information out as that's something they'd like to analyze themselves.
