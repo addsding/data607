@@ -9,7 +9,7 @@ output:
 
 ## Overview
 
-To start with, I'll be copying over (*Text Mining with R, Chapter 2's*)[https://www.tidytextmining.com/sentiment.html] code base in order to perform sentiment analysis on something of my choice.
+To start with, I'll be copying over [*Text Mining with R, Chapter 2's*](https://www.tidytextmining.com/sentiment.html) code base in order to perform sentiment analysis on something of my choice.
 
 ## Text Mining with R, Chapter 2
 
