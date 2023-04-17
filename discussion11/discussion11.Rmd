@@ -1,0 +1,53 @@
+---
+title: 'Discussion 11: Recommender Systems'
+author: "Alice Ding"
+date: "2023-04-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+### Overview
+
+For this week's discussion, I've chosen to analyze the *Instagram Reels* recommender system. A *Reel* is a short-form video similar to Instagram stories, however they don't disappear in 24 hours and last forever. *Reels* was created by Instagram as a competitor to *TikTok* in 2020 and since then has become an integral part of content creation for the photo/video platform.
+
+Found either on the `Reels` or `Explore` tabs as well as just the regular homepage feed, users are able to scroll through endless amounts of content while Instagram curates what *Reels* users are shown. This notebook serves as a way of analyzing this recommender system to see how exactly the service works.
+
+### Scenario Design Analysis
+
+In this case, this analysis can be done twice: once for content creators and once for those who consume the content. This is all from the perspective of Instagram.
+
+#### 1. Target Users
+
+- Creators: People who create content (*Reels*) for users to watch/engage with
+- Consumers: People scrolling through the application
+
+#### 2. Key Goals
+
+- Creators: Create engaging content viewed by as many people as possible
+- Consumers: View content that is relevant to their interests and entertains them as long as possible
+
+#### 3. How can we help them accomplish these goals?
+
+- Creators: Give users the tools to make high-quality videos as well as ensure they are set up for success to be discoverable and found
+- Consumers: Make the viewing and scrolling experience as smooth as possible while recommending content to watch that is relevant and interesting to these users
+
+### Reverse Engineering the Process
+
+Using this article from [Hootsuite](https://blog.hootsuite.com/instagram-reels-algorithm/), it explains several factors that go into the recommendation algorithm. We can see that Instagram is doing two things when trying to recommend content to users: classifying *Reels*/posts as similar (i.e. content about dogs will be grouped together with other content about dogs) and determining whether consumers like specific types of content (i.e. interacting with one dog post -> getting shown more dog posts).
+
+For consumers, if people want to make sure that they're watching things that are interesting to them, they have to properly engage with that sort of content. Liking, sharing, and commenting are all ways of engaging with content that make it clear to Instagram that this is a post that interests them. With that information, Instagram is able to recommend similar Reels and other content to keep users engaged.
+
+For content creators, visibility and discoverability are key. Music, actual content shown (i.e. is a human visible, are watermarks visible, etc.), and hashtags used in the post are all ways in which Instagram chooses whether or not to show certain posts. A higher weight is put on posts that are newer, are posted at certain times, and those that use Instagram's filters and effects. 
+
+### Recommendations
+
+For consumers, just using the application will start feeding data into the recommendation system so just ensuring that Instagram knows what type of content they do or don't like is helpful enough for ensuring that people get what they need from interacting with the app.
+
+For content creators, making the information on how to boost a user's *Reels* more accessible in the application would be helpful for everyone involved. An example of this could be telling a user to cut down on hashtags before posting their content as it's shown that only choosing a few is actually better than using all 30 available slots.
+
+While it makes sense that not *every* post can be recommended to every person out there interested in that sort of content, gaining visibility is important for creators as well as consumers since one would not exist without the other; by setting creators up for success and actively helping them create a post that is more likely to be engaged with, the cycle of content creation and consumption will continue and help Instagram retain users as a whole.
+
+#### Sources
+
+McLachlan, Stacey. “Instagram Reels Algorithm: Everything You Need to Know.” Social Media Marketing &amp; Management Dashboard, Hootsuite, 4 Mar. 2023, https://blog.hootsuite.com/instagram-reels-algorithm/. 
