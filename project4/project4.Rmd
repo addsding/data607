@@ -3,8 +3,8 @@ title: "Project 4"
 author: "Alice Ding"
 date: "2023-04-28"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE} 
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 ```It can be useful to be able to classify new "test" documents using already classified "training" documents.  A common example is using a corpus of labeled spam and ham (non-spam) e-mails to predict whether or not a new document is spam.```
 
-For this project, I'll be taking a list of 2,551 ham (non-spam) messages and 1,397 spam messages to see whether a document is spam or not.
+For this project, I'll be taking a list of 2,551 ham (non-spam) messages and 1,398 spam messages to see whether a document is spam or not.
 
 ## Load Data
 
@@ -32,10 +32,10 @@ untar("20021010_easy_ham.tar.bz2"
       , compressed = "bzip2")
 
 # download the spam file
-download.file(url = "http://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2"
-              , destfile = "20050311_spam_2.tar.bz2")
+download.file(url = "https://spamassassin.apache.org/old/publiccorpus/20030228_spam_2.tar.bz2"
+              , destfile = "10030228_spam_2.tar.bz2")
 
-untar("20050311_spam_2.tar.bz2"
+untar("10030228_spam_2.tar.bz2"
       , exdir="project4"
       , compressed = "bzip2")
 ```
@@ -113,9 +113,9 @@ Now, using the `DocumentTermMatrix()` function, we will create a document Term M
 d <- removeSparseTerms(DocumentTermMatrix(corp, control = list(stemming = TRUE)), 0.999)
 
 convert_count <- function(x) {
-  y <- ifelse(x > 0, 1, 0)
-  y <- factor(y, levels = c(0, 1), labels = c(0, 1))
-  y
+  result <- ifelse(x > 0, 1, 0)
+  result <- factor(result, levels = c(0, 1), labels = c(0, 1))
+  result
 }
 
 temp <- apply(d, 2, convert_count)
@@ -133,9 +133,12 @@ We'll use 70% of the data as training data and 30% for testing. For the model, w
 set.seed(1234)
 prediction <- createDataPartition(full_df_matrix$class, p = 0.7, list = FALSE, times = 1)
 
+# create the training and testing dataset
 training <- full_df[prediction,]
+# testing is just everything not in the training set
 testing <- full_df[-prediction,]
 
+# have to turn these into factors, otherwise the randomForest thing won't work
 training$tag <- factor(training$tag)
 testing$tag <- factor(testing$tag)
 

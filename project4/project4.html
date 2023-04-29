@@ -361,7 +361,7 @@ display: none;
 <h2>Overview</h2>
 <p><code>It can be useful to be able to classify new &quot;test&quot; documents using already classified &quot;training&quot; documents.  A common example is using a corpus of labeled spam and ham (non-spam) e-mails to predict whether or not a new document is spam.</code></p>
 <p>For this project, I’ll be taking a list of 2,551 ham (non-spam)
-messages and 1,397 spam messages to see whether a document is spam or
+messages and 1,398 spam messages to see whether a document is spam or
 not.</p>
 </div>
 <div id="load-data" class="section level2">
@@ -378,10 +378,10 @@ untar(&quot;20021010_easy_ham.tar.bz2&quot;
       , compressed = &quot;bzip2&quot;)
 
 # download the spam file
-download.file(url = &quot;http://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2&quot;
-              , destfile = &quot;20050311_spam_2.tar.bz2&quot;)
+download.file(url = &quot;https://spamassassin.apache.org/old/publiccorpus/20030228_spam_2.tar.bz2&quot;
+              , destfile = &quot;10030228_spam_2.tar.bz2&quot;)
 
-untar(&quot;20050311_spam_2.tar.bz2&quot;
+untar(&quot;10030228_spam_2.tar.bz2&quot;
       , exdir=&quot;project4&quot;
       , compressed = &quot;bzip2&quot;)</code></pre>
 </div>
@@ -421,7 +421,7 @@ full_df &lt;- rbind(ham_df, spam_df)
 table(full_df$tag)</code></pre>
 <pre><code>## 
 ##  ham spam 
-## 2551 1397</code></pre>
+## 2551 1398</code></pre>
 <p>We’ve successfully imported all the emails and tagged them! Now,
 we’ll want to clean the <code>email</code> column to only hold
 information we need.</p>
@@ -459,9 +459,9 @@ of spam vs. ham.</p>
 <pre class="r"><code>d &lt;- removeSparseTerms(DocumentTermMatrix(corp, control = list(stemming = TRUE)), 0.999)
 
 convert_count &lt;- function(x) {
-  y &lt;- ifelse(x &gt; 0, 1, 0)
-  y &lt;- factor(y, levels = c(0, 1), labels = c(0, 1))
-  y
+  result &lt;- ifelse(x &gt; 0, 1, 0)
+  result &lt;- factor(result, levels = c(0, 1), labels = c(0, 1))
+  result
 }
 
 temp &lt;- apply(d, 2, convert_count)
@@ -478,9 +478,12 @@ trees.</p>
 <pre class="r"><code>set.seed(1234)
 prediction &lt;- createDataPartition(full_df_matrix$class, p = 0.7, list = FALSE, times = 1)
 
+# create the training and testing dataset
 training &lt;- full_df[prediction,]
+# testing is just everything not in the training set
 testing &lt;- full_df[-prediction,]
 
+# have to turn these into factors, otherwise the randomForest thing won&#39;t work
 training$tag &lt;- factor(training$tag)
 testing$tag &lt;- factor(testing$tag)
 
@@ -491,12 +494,12 @@ confusionMatrix(table(predicted, testing$tag))</code></pre>
 ## 
 ##          
 ## predicted ham spam
-##      ham  788    0
-##      spam   0  395
+##      ham  774    0
+##      spam   0  410
 ##                                      
 ##                Accuracy : 1          
 ##                  95% CI : (0.9969, 1)
-##     No Information Rate : 0.6661     
+##     No Information Rate : 0.6537     
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
 ##                                      
 ##                   Kappa : 1          
@@ -507,9 +510,9 @@ confusionMatrix(table(predicted, testing$tag))</code></pre>
 ##             Specificity : 1.0000     
 ##          Pos Pred Value : 1.0000     
 ##          Neg Pred Value : 1.0000     
-##              Prevalence : 0.6661     
-##          Detection Rate : 0.6661     
-##    Detection Prevalence : 0.6661     
+##              Prevalence : 0.6537     
+##          Detection Rate : 0.6537     
+##    Detection Prevalence : 0.6537     
 ##       Balanced Accuracy : 1.0000     
 ##                                      
 ##        &#39;Positive&#39; Class : ham        
