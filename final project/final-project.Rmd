@@ -1,0 +1,893 @@
+---
+title: "Final Project"
+author: "Alice Ding"
+date: "2023-05-02"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## Overview
+
+South Korea has its own genre of music known as k-pop. Artists such as BTS and BLACKPINK have become more prominent in western media over the past several years, but there is a much more diverse music scene than just these artists. Korean national broadcasting companies have weekly music shows where artists come to promote new albums and singles by performing one or two songs to an international audience and there is a song winner announced that represents the most "popular" song for that week. There are six music shows that are broadcasted on a different day each week and each has their own way of calculating popularity scores:
+
+-   Tuesday: SBS M The Show\*
+    -   15% Broadcast (played on SBS MTV)
+    -   40% Digital Sales (streams & downloads)
+    -   10% Physical Album Sales
+    -   20% Video Views (YouTube official MV views)
+    -   15% Voting (5% pre-voting [before the show], 10% live voting [during the show])
+-   Wednesday: MBC M Show Champion\*
+    -   15% Broadcast (performing on the show)
+    -   35% Digital Sales
+    -   15% Physical Album Sales
+    -   10% Video Views
+    -   20% Voting
+-   Thursday: MNET MCountdown\*
+    -   10% Broadcast (performing on the show)
+    -   50% Digital Sales
+    -   15% Physical Album Sales
+    -   10% Video Views
+    -   25% Voting (15% global voting, 10% live voting)
+-   Friday: KBS Music Bank
+    -   20% Broadcast (played on KBS)
+    -   60% Digital Sales
+    -   5% Physical Album Sales
+    -   5% Video Views (YouTube official MV, TikTok)
+    -   10% Voting
+-   Saturday: MBC Show! Music Core\*\*
+    -   10% Broadcast (performing on the show)
+    -   50% Digital Sales
+    -   15% Physical Album Sales
+    -   10% Video Views
+    -   25% Voting (15% global voting, 10% live voting)
+-   Sunday: SBS Inkigayo\*
+    -   10% Broadcast (played on SBS)
+    -   55% Digital Sales
+    -   10% Physical Album Sales
+    -   30% Video Views (YouTube official MV views)
+    -   10% Voting (5% pre-voting [before the show], 5% live voting [during the show])
+
+Almost every show has the concept of a "crown" (\* = triple crown, \*\* = quintuple crown) which denotes that once a song has won three or five times, it is ineligible from winning again.
+
+Looking at music show wins from the 2016 - 2020, are there any trends in which artists dominated the charts during this time period or what types of artists (group, solo, male, female) typically won?
+
+## Data
+
+This project utilizes two sources of data:
+
+-   A Google sheet of scraped music show wins (all sourced from Wikipedia)
+-   A [Kaggle](https://www.kaggle.com/datasets/kimjihoo/kpopdb) dataset of individual idol names, boy groups, and girl groups
+
+The wins information mainly from Wikipedia includes the following information:
+
+-   Date: Date that the show was broadcasted
+-   Show: Show name; one of six shows - The Show, Show Champion, MCountdown, Music Bank, Show! Music Core, Inkigayo
+-   Song: Song that won this broadcast
+-   Artist: Artist name that performed the winning song
+-   Sub Group: Name of sub group if applicable
+-   Featuring: Artist name that featured on the song if applicable
+-   Solo or Group: Whether the `Artist` is a solo singer/performer or a group
+-   Full Name: Full name of the `Artist` if they're a solo performer
+-   Points: How many points the song received; every show has a different point system that takes into account fan voting, music video counts, album sales, digital sales, etc.
+-   Crown: Whether this song achieved a triple/quintuple crown
+
+The Kaggle tables hold the following relevant information
+
+-   Name/Stage Name: Name of the solo artist or group
+-   Gender: Gender of the solo artist or group (M, F, MF for multi-gendered groups)
+-   Debut: Date the group debuted (if the soloist is from a group, we'll join that date to the data)
+
+### Loading the Tables
+
+This is a total of 4 tables to start with as the music show wins is one and the Kaggle source has three additional tables. I'll load them down below -- note that the Google sheet import requires OAuth in order to access the file.
+
+```{r load-data}
+library(googlesheets4)
+
+# google sheets; this is the ID of the sheet, it doesn't require the full link in order to work
+wins <- read_sheet ('1rIjuuurAAIdeo00GTl8wKpIyntrVARHjWG_wy4tMu9I') 
+
+# downloaded kaggle csvs
+idols <- read.csv('https://raw.githubusercontent.com/addsding/data607/main/final%20project/kpop_idols.csv')
+boy_groups <- read.csv('https://raw.githubusercontent.com/addsding/data607/main/final%20project/kpop_idols_boy_groups.csv')
+girl_groups <- read.csv('https://raw.githubusercontent.com/addsding/data607/main/final%20project/kpop_idols_girl_groups.csv')
+```
+
+### Cleaning the Tables
+
+This section will focus on changing column names to be more readable.
+
+```{r clean}
+library(dplyr)
+
+wins <- wins |>
+  rename("show_date" =	"DATE"
+         , "show_name" = "SHOW"
+         , "song_name" = "SONG"
+         , "artist_name" = "ARTIST"	
+         , "sub_group" = "SUB GROUP"
+         , "feature_artist_name" = "FEATURING"	
+         , "solo_group" = "SOLO OR GROUP"
+         , "artist_full_name" = "FULL NAME"	
+         , "group_name_for_soloists" = "GROUP NAME"
+         , "points" = "POINTS"
+         , "is_crown_winner" = "CROWN"
+         )
+
+boy_groups <- boy_groups |> 
+  rename("group_name" = "Name"
+         , "short_name" = "Short"
+         , "korean_group_name" = "Korean.Name"
+         , "debut_date" = "Debut"
+         , "company_name" = "Company"
+         , "member_count" = "Members"
+         , "orig_member_count" = "Orig..Memb."
+         , "fanclub_name" = "Fanclub.Name"
+         , "is_active" = "Active"
+         )
+
+girl_groups <- girl_groups |> 
+  rename("group_name" = "Name"
+         , "short_name" = "Short"
+         , "korean_group_name" = "Korean.Name"
+         , "debut_date" = "Debut"
+         , "company_name" = "Company"
+         , "member_count" = "Members"
+         , "orig_member_count" = "Orig..Memb."
+         , "fanclub_name" = "Fanclub.Name"
+         , "is_active" = "Active"
+         )
+
+idols <- idols |>
+  rename("stage_name" = "Stage.Name"
+         , "full_name" = "Full.Name"
+         , "korean_name" = "Korean.Name"
+         , "korean_stage_name" = "K..Stage.Name"
+         , "birth_date" = "Date.of.Birth"
+         , "group_name" = "Group"
+         , "nationality_country" = "Country"
+         , "birth_place" = "Birthplace"
+         , "other_groups" = "Other.Group"
+         , "gender" = "Gender"
+         )
+```
+
+### Prepping the Tables for Joining
+
+The dataframe I'd like to end up with uses `wins` as the base and essentially just joins artist/group info so we can see who typically wins music shows. We'll start by combining `boy_groups` and `girl_groups`, selecting the relevant information, and also creating columns to join on where the strings are all lower case. We'll also modify the `debut_date` column to be an actual date instead of a `chr` type.
+
+```{r combine-kaggle-data}
+library(stringr)
+
+# adding a gender column for both dataframes
+boy_groups <- boy_groups |> mutate(gender = "M")
+girl_groups <- girl_groups |> mutate(gender = "F")
+
+# union the two dataframes together and select only relevant columns
+all_groups <- rbind(boy_groups, girl_groups) |> 
+  select(group_name, debut_date, company_name, member_count, orig_member_count, is_active, gender)
+
+# make a new column that is the lowercase version of group_name (joining field)
+all_groups <- all_groups |> mutate(group_name_lower = str_to_lower(group_name))
+
+# transform the debut_date column into a date type
+all_groups$debut_date <- as.Date(all_groups$debut_date, "%Y-%m-%d")
+
+head(all_groups)
+```
+
+Next, we'll be taking subsets of the Wikipedia data to prep for joining. As we have one table (`all_groups`) holding group information and then one table (`idols`) for soloists, we'll have to eventually do two joins.
+
+```{r separate-wins}
+# make the artist name and group name info lower case
+wins <- wins |> mutate(artist_name_lower = str_to_lower(artist_name)
+                       , artist_full_name_lower = str_to_lower(artist_full_name)
+                       , group_name_for_soloists_lower = str_to_lower(group_name_for_soloists)
+                       )
+
+# change sub_group into a character column and replace all cases of NULL with ''
+wins$sub_group <- as.character(wins$sub_group)
+wins$sub_group[wins$sub_group == 'NULL'] <- NA
+
+# make sure that show_date is formatted as a date
+wins$show_date <- as.Date(wins$show_date, "%Y-%m-%d")
+
+# create separate dataframes for group and solo
+group_wins <- wins |> filter(solo_group == "G")
+solo_wins <- wins |> filter(solo_group == "S")
+
+head(group_wins)
+```
+
+### Joining the Tables
+
+Note that `wins` had rows for days where there weren't shows being broadcasted or no winning song; by doing these joins in this section, we're removing these rows. This means that the ending dataframe will likely have less rows than the one we began with (`wins`).
+
+#### Group Wins
+
+With these two subsets created now, we'll start with `group_wins` -- this is joined to `all_groups` based on `artist_name`. For simplicity, let's change the case for all strings to lower in order to ensure that the join will work. This will be a left join with `group_wins` as the base and `all_groups` appending all its data.
+
+```{r group-win-join}
+group_wins_full <- group_wins |> left_join(all_groups, by = join_by(artist_name_lower == group_name_lower))
+
+# find how many NAs resulted from this
+sum(is.na(group_wins_full$group_name))
+```
+
+40 nulls -- which groups don't exist in our Kaggle dataset?
+
+```{r group-join-na}
+group_wins_full |> 
+  group_by(artist_name) |>
+  filter(is.na(group_name)) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  arrange(desc(count))
+```
+
+As there are only 10 groups missing, just adding this data to the dataframe can fix this. An alternative fix is to just go into the .csv and modify it myself, but I'd like to attempt to do it in R.
+
+```{r group-join-fix}
+# create the lists containing all the data
+group_x1 <- list(group_name = "X1"
+              , debut_date = as.Date("2019-08-27", "%Y-%m-%d")
+              , company_name = "Stone"
+              , member_count = 11
+              , orig_member_count = 11
+              , is_active = "No"
+              , gender = "M"
+              , group_name_lower = "x1"
+              )
+
+group_ioi <- list(group_name = "IOI"
+              , debut_date = as.Date("2016-05-04", "%Y-%m-%d")
+              , company_name = "YMC"
+              , member_count = 11
+              , orig_member_count = 11
+              , is_active = "No"
+              , gender = "M"
+              , group_name_lower = "ioi"
+              )
+
+group_akmu <- list(group_name = "AKMU"
+              , debut_date = as.Date("2014-04-07", "%Y-%m-%d")
+              , company_name = "YG"
+              , member_count = 2
+              , orig_member_count = 2
+              , is_active = "Yes"
+              , gender = "MF"
+              , group_name_lower = "akmu"
+              )
+
+group_sechskies <- list(group_name = "SECHSKIES"
+              , debut_date = as.Date("1997-04-97", "%Y-%m-%d")
+              , company_name = "YG"
+              , member_count = 4
+              , orig_member_count = 6
+              , is_active = "Yes"
+              , gender = "M"
+              , group_name_lower = "sechskies"
+              )
+
+group_epikhigh <- list(group_name = "Epik High"
+              , debut_date = as.Date("2003-10-23", "%Y-%m-%d")
+              , company_name = "YG"
+              , member_count = 3
+              , orig_member_count = 3
+              , is_active = "Yes"
+              , gender = "M"
+              , group_name_lower = "epik high"
+              )
+
+group_ssak3 <- list(group_name = "SSAK3"
+              , debut_date = as.Date("2020-07-25", "%Y-%m-%d")
+              , company_name = "MBC"
+              , member_count = 3
+              , orig_member_count = 3
+              , is_active = "No"
+              , gender = "MF"
+              , group_name_lower = "ssak3"
+              )
+
+group_10cm <- list(group_name = "10cm"
+              , debut_date = as.Date("2010-04-10", "%Y-%m-%d")
+              , company_name = "Ten Music"
+              , member_count = 1
+              , orig_member_count = 2
+              , is_active = "Yes"
+              , gender = "M"
+              , group_name_lower = "10cm"
+              )
+
+group_dynamicduo <- list(group_name = "Dynamic Duo"
+              , debut_date = as.Date("2004-05-17", "%Y-%m-%d")
+              , company_name = "Amoeba Culture"
+              , member_count = 2
+              , orig_member_count = 2
+              , is_active = "Yes"
+              , gender = "M"
+              , group_name_lower = "dynamic duo"
+              )
+
+group_hyukoh <- list(group_name = "Hyukoh"
+              , debut_date = as.Date("2014-09-18", "%Y-%m-%d")
+              , company_name = "YG"
+              , member_count = 4
+              , orig_member_count = 4
+              , is_active = "Yes"
+              , gender = "M"
+              , group_name_lower = "hyukoh"
+              )
+
+group_noel <- list(group_name = "Noel"
+              , debut_date = as.Date("2002-12-16", "%Y-%m-%d")
+              , company_name = "JYP"
+              , member_count = 4
+              , orig_member_count = 4
+              , is_active = "Yes"
+              , gender = "M"
+              , group_name_lower = "noel"
+              )
+
+# append all of these groups to all_groups
+all_groups <- 
+  rbind(
+    rbind(
+      rbind(
+        rbind(
+          rbind(
+            rbind(
+              rbind(
+                rbind(
+                  rbind(
+                    rbind(all_groups, group_10cm)
+                    , group_akmu)
+                  , group_dynamicduo)
+                , group_epikhigh)
+              , group_hyukoh)
+            , group_ioi)
+          , group_noel)
+        , group_sechskies)
+      , group_ssak3)
+    , group_x1)
+
+# redo the join and verify there are no more NAs
+group_wins_full <- group_wins |> left_join(all_groups, by = join_by(artist_name_lower == group_name_lower))
+
+sum(is.na(group_wins_full$group_name))
+```
+
+No more NAs!
+
+#### Solo Wins
+
+Now, we'll do a join for the soloist wins -- this will entail us joining by `artist_full_name` as well as `group_name_for_soloists` to ensure we get the right person as there could be cases with artists having the same name.
+
+```{r solo-win-join}
+# make group_name 'Solo' for those without a group name
+idols$group_name[idols$group_name == ""] <- "Solo"
+
+# make the fields in idols for joining (lower case versions of two other fields) and select relevant fields
+idols <- idols |> mutate(full_name_lower = str_to_lower(full_name)
+                       , group_name_lower = str_to_lower(group_name)
+                       ) |>
+  select(stage_name, full_name, gender, full_name_lower, group_name_lower)
+
+solo_wins_full <- left_join(solo_wins, idols, by = c('artist_full_name_lower' = 'full_name_lower'
+                                                             , 'group_name_for_soloists_lower' = 'group_name_lower')
+                                         )
+
+sum(is.na(solo_wins_full$stage_name))
+```
+
+52 nulls -- who's missing?
+
+```{r solo-join-na}
+head(solo_wins_full |> 
+  group_by(artist_name) |>
+  filter(is.na(stage_name)) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  arrange(desc(count)))
+```
+
+As there are 22 missing artists here, I'll opt to add these directly to the idols .csv and reload that file. I'll also only be adding relevant data to avoid researching too many irrelevant things (birth place, birthday, etc.) before rejoining it to `solo_wins`.
+
+```{r idols-data}
+idols <- read.csv('https://raw.githubusercontent.com/addsding/data607/main/final%20project/kpop_idols_v2.csv')
+
+idols <- idols |>
+  rename("stage_name" = "Stage.Name"
+         , "full_name" = "Full.Name"
+         , "korean_name" = "Korean.Name"
+         , "korean_stage_name" = "K..Stage.Name"
+         , "birth_date" = "Date.of.Birth"
+         , "group_name" = "Group"
+         , "nationality_country" = "Country"
+         , "birth_place" = "Birthplace"
+         , "other_groups" = "Other.Group"
+         , "gender" = "Gender"
+         )
+
+idols$group_name[idols$group_name == ""] <- "Solo"
+
+idols <- idols |> mutate(full_name_lower = str_to_lower(full_name)
+                       , group_name_lower = str_to_lower(group_name)
+                       ) |>
+  select(stage_name, full_name, gender, full_name_lower, group_name_lower)
+
+solo_wins_full <- left_join(solo_wins, idols, by = c('artist_full_name_lower' = 'full_name_lower'
+                                                             , 'group_name_for_soloists_lower' = 'group_name_lower')
+                                         )
+
+sum(is.na(solo_wins_full$stage_name))
+```
+
+No more nulls!
+
+Now let's join `debut_date` to the appropriate soloists (only if they're part of a group).
+
+```{r idols-company-debut}
+solo_wins_full <- left_join(solo_wins_full
+                            , all_groups |> select(group_name_lower, debut_date)
+                            , by = c('group_name_for_soloists_lower' = 'group_name_lower')) |>
+  select(show_date
+         , show_name
+         , song_name
+         , artist_name
+         , sub_group
+         , feature_artist_name
+         , solo_group
+         , points
+         , is_crown_winner
+         , debut_date
+         , gender
+         )
+
+head(solo_wins_full)
+```
+
+Now both tables have the relevant fields we're looking for!
+
+### Combining into One Wins Table
+
+Let's union these two tables, `solo_wins_full` and `group_wins_full`, into one.
+
+```{r all-wins}
+group_wins_full <- group_wins_full |> select(show_date
+         , show_name
+         , song_name
+         , artist_name
+         , sub_group
+         , feature_artist_name
+         , solo_group
+         , points
+         , is_crown_winner
+         , debut_date
+         , gender
+         )
+
+all_wins <- rbind(solo_wins_full, group_wins_full) |> arrange(show_date)
+
+head(all_wins)
+```
+
+We're reading for exploration!
+
+## Exploration
+
+Let's start with some summary stats.
+
+```{r summary}
+summary(all_wins)
+```
+
+Some interesting things right off the bat -- winners' debut dates range from 1995 to 2020, awesome to see that someone who debuted in 1995 can still win 20+ years later.
+
+Let's start breaking down winners by various slices of data.
+
+### Top Artists
+
+How many artists are there that have won? How does that break down between group and soloist artists?
+
+```{r artists}
+artists <- all_wins |> 
+  group_by(solo_group) |>
+  summarise(count = n_distinct(artist_name)) |>
+  arrange(desc(count))
+
+head(artists)
+```
+
+In total, there are 88 groups and 51 soloists in this dataset, resulting in 139 total artists.
+
+Have groups always remained dominant every year or have soloists been trending upwards in wins?
+
+```{r gs-years}
+library(lubridate)
+library(ggplot2)
+
+by_gs_year <- all_wins |> 
+  group_by(solo_group, year(show_date)) |>
+  summarise(count = n(),
+            .groups = 'drop') 
+
+by_gs_year <- by_gs_year |>
+  rename("year" = "year(show_date)"
+         ) |>
+  group_by(year) |> mutate(percent = count/sum(count))
+
+ggplot(by_gs_year, aes(fill = solo_group
+                 , y = percent
+                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+This trend seems pretty consistent -- 2019 had a bit of a bump up for soloists, but otherwise groups came back in 2020.
+
+How many different groups won in each year? Are we seeing diverse winners or are they usually the same artists?
+
+```{r artist-count-years}
+by_year <- all_wins |> 
+  group_by(year(show_date)) |>
+  summarise(count = n(),
+            .groups = 'drop') 
+
+by_year <- by_year |>
+  rename("year" = "year(show_date)"
+         ) 
+
+ggplot(by_year, aes(y = count
+                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+There's a slight increase in number of artists who win over time, signifying a diversified pool of musical talent.
+
+Which artists won the most during this time period?
+
+```{r top-artists}
+by_artist <- all_wins |> 
+  group_by(artist_name) |>
+  summarise(count = n(),
+            percent = 100 * n()/nrow(all_wins),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+head(by_artist, 10)
+```
+
+BTS (Bangtan) won the most between 2016-2020 which is no surprise as this is when they were rising to fame. Twice is close behind and GFRIEND comes in third here -- this seems very group focused though, who were the top soloists?
+
+```{r artists-solo}
+by_artist_solo <- all_wins |> 
+  filter(solo_group == "S") |>
+  group_by(artist_name) |>
+  summarise(count = n(),
+            percent = 100 * n()/nrow(all_wins),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+head(by_artist_solo, 10)
+```
+
+IU is a very prominent soloist in the industry so her topping the charts makes sense!
+
+What if we tried looking at wins by artist over time? To make this chart less complicated, let's only include the top 10 groups.
+
+```{r artist-year}
+by_artist_year <- all_wins |> 
+  filter(artist_name %in% head(by_artist$artist_name, 10)) |>
+  group_by(artist_name, year(show_date)) |>
+  summarise(count = n(),
+            .groups = 'drop') 
+
+by_artist_year <- by_artist_year |>
+  rename("year" = "year(show_date)"
+         ) |>
+  group_by(year) |> mutate(percent = count/sum(count))
+
+ggplot(by_artist_year, aes(fill = artist_name
+                 , y = count
+                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+With this chart, we can kind of see the rise of some groups and the fall of others; EXO and GFRIEND had many more wins in 2016, but that number slowly dwindles as years pass. On the opposite side, BTS spikes in popularity in 2020 after a gradual increase past 20 wins before skyrocketing almost to 50. It's also interesting how we see Twice and Wanna One appear in 2017 with the latter disappearing after 2019 (this is due to Wanna One only being a temporary group) and the former slowly dwindling in popularity unfortunately as well. Other notable introductions are ITZY who debuted in 2019 and then BLACKPINK who have very little activity in the first three years, but then did very well in 2020.
+
+### Triple/Quintuple Crowns
+
+How many songs were given crowns over the years?
+
+```{r crowns}
+by_crown_year <- all_wins |> 
+  filter(is_crown_winner) |>
+  group_by(year(show_date)) |>
+  summarise(count = n_distinct(song_name),
+            .groups = 'drop') 
+
+by_crown_year <- by_crown_year |>
+  rename("year" = "year(show_date)"
+         )
+
+ggplot(by_crown_year, aes(y = count
+                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+Interestingly, we see an increase then sharp decrease over the years in songs rewarded crowns.
+
+Who were the winners of these crowns? Let's start with groups.
+
+```{r crowns-group}
+by_crown_year_group <- all_wins |> 
+  filter(is_crown_winner, solo_group == "G") |>
+  group_by(artist_name, year(show_date)) |>
+  summarise(count = n_distinct(song_name),
+            .groups = 'drop') 
+
+by_crown_year_group <- by_crown_year_group |>
+  rename("year" = "year(show_date)"
+         ) |>
+  group_by(year) |> mutate(percent = count/sum(count))
+
+ggplot(by_crown_year_group, aes(fill = artist_name
+                                 , y = count
+                                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+In terms of groups that had more than one crown a year, these were Gfriend, Twice, and BTS; Twice had a whopping 4 crowns in 2017 and 3 in 2018!
+
+What about soloists?
+
+```{r crowns-soloist}
+by_crown_year_soloist <- all_wins |> 
+  filter(is_crown_winner, solo_group == "S") |>
+  group_by(artist_name, year(show_date)) |>
+  summarise(count = n_distinct(song_name),
+            .groups = 'drop') 
+
+by_crown_year_soloist <- by_crown_year_soloist |>
+  rename("year" = "year(show_date)"
+         ) |>
+  group_by(year) |> mutate(percent = count/sum(count))
+
+ggplot(by_crown_year_soloist, aes(fill = artist_name
+                                 , y = count
+                                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+No one had more than one crown per year, but IU won three out of the four years!
+
+### Gender
+
+Overall, do females or males win more?
+
+```{r gender}
+by_gender <- all_wins |> 
+  group_by(gender) |>
+  summarise(count = n(),
+            percent = 100 * n()/nrow(all_wins),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+by_gender
+```
+
+This is very much a fifty-fifty split (there are a few wins from groups with more than one gender) which is interesting -- what if we broke this down by group vs. solo?
+
+```{r gender-group-solo}
+by_gender_gs <- all_wins |> 
+  group_by(gender, solo_group) |>
+  summarise(count = n(),
+            percent = 100 * n()/nrow(all_wins),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+by_gender_gs
+```
+
+We see a slight split here -- males seem to dominate the wins in terms of groups, but soloist females have more wins than soloist males.
+
+How about wins over time by gender?
+
+```{r gender-year}
+by_gender_year <- all_wins |> 
+  group_by(gender, year(show_date)) |>
+  summarise(count = n(),
+            .groups = 'drop')
+
+by_gender_year <- by_gender_year |>
+  rename("year" = "year(show_date)"
+         ) |>
+  group_by(year) |> mutate(percent = count/sum(count))
+
+ggplot(by_gender_year, aes(fill = gender
+                 , y = percent
+                 , x = year)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+Interestingly, we can see that 2016-2018 had more male wins, but female wins became more prominent in 2019-2020. There also seemed to be more of a rise of multi-gendered groups in 2019-2020 as we saw more wins from them as well.
+
+Do certain music shows hold more biases towards specific genders?
+
+```{r gender-show}
+by_gender_show <- all_wins |> 
+  group_by(gender, show_name) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  group_by(show_name) |> mutate(percent = count/sum(count))
+
+ggplot(by_gender_show, aes(fill = gender
+                 , y = percent
+                 , x = show_name)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+Inkigayo and MCountdown seem to favor female artists more heavily (especially the former) while male groups dominate the other shows; Music Bank is very much male dominated in comparison to the other shows as well.
+
+### Debut Year
+
+Are winning artists typically more recent artists or older ones?
+
+Note a limitation for this cut of data is that if a soloist doesn't originate from a group, our data doesn't have when they debuted. Due to this, let's focus on just group wins.
+
+```{r debut}
+by_debut <- filter(all_wins, solo_group == "G") |> 
+  group_by(year(debut_date)) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+by_debut <- by_debut |>
+  rename("year" = "year(debut_date)"
+         )
+
+head(by_debut, 10)
+```
+
+A lot of these wins seem to come from those who debuted 2-3 years before our daterange -- does that change over time?
+
+```{r debut-year}
+by_debut_year <- filter(all_wins, solo_group == "G") |> 
+  group_by(as.character(year(debut_date)), year(show_date)) |>
+  summarise(count = n(),
+            .groups = 'drop')
+
+by_debut_year <- by_debut_year |>
+  rename("show_year" = "year(show_date)"
+         , "debut_year" = "as.character(year(debut_date))"
+         ) |>
+  group_by(show_year) |> mutate(percent = count/sum(count))
+
+ggplot(by_debut_year, aes(fill = debut_year
+                 , y = percent
+                 , x = show_year)) + 
+    geom_bar(position="stack", stat="identity")
+```
+
+While hard to see specifics, it's clear that in 2019, those groups did a much better job at splashing into the scene and winning shows.
+
+### Point Distribution
+
+What are point distributions by music show? Note that Show Champion doesn't have a scoring system.
+
+```{r points-inkigayo}
+ggplot(filter(all_wins, show_name == "Inkigayo"), aes(x = points)) +
+  geom_histogram() +
+  theme_classic() +
+  ggtitle("Inkigayo Points Distribution")
+```
+
+Interestingly, this chart seems to have 2 curves.
+
+```{r points-mcountdown}
+ggplot(filter(all_wins, show_name == "MCountdown", ), aes(x = points)) +
+  geom_histogram() +
+  theme_classic() +
+  ggtitle("MCountdown Points Distribution")
+```
+
+The max point value of 11000 seems to interestingly have the most amount of songs. Perhaps this means that it's common to get the maximum score.
+
+```{r points-musicbank}
+ggplot(filter(all_wins, show_name == "Music Bank"), aes(x = points)) +
+  geom_histogram() +
+  theme_classic() +
+  ggtitle("Music Bank Points Distribution")
+```
+
+This is the most normally distributed one so far, albeit it's a bit right-skewed.
+
+```{r points-showmusiccore}
+ggplot(filter(all_wins, show_name == "Show! Music Core"), aes(x = points)) +
+  geom_histogram() +
+  theme_classic() +
+  ggtitle("Show! Music Core Points Distribution")
+```
+
+Similar to Music Bank, this looks more normally distributed and is also right-skewed.
+
+```{r points-theshow}
+ggplot(filter(all_wins, show_name == "The Show"), aes(x = points)) +
+  geom_histogram() +
+  theme_classic() +
+  ggtitle("The Show Points Distribution")
+```
+
+Interestingly, this is the first left skewed data!
+
+What artists had songs that garnered the most/max amount of points?
+
+```{r max-points}
+max_points <- all_wins |>
+  filter(show_name != "Show Champion") |>
+  group_by(show_name) |>
+  summarise(max_points = max(points, na.rm = TRUE)
+            , .groups = 'drop')
+
+max_point_wins <- inner_join(all_wins, max_points, by = c('points' = 'max_points'))
+
+by_artist_max_points <- max_point_wins |> 
+  group_by(artist_name, gender) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+head(by_artist_max_points, 10)
+```
+
+BTS had 16 music show wins with maximum points -- very impressive. Interestingly, we can see that only 3 of these wins are from female artists. Do these stats correlate with music show and gender? Let's check.
+
+```{r max-points-music-shows}
+by_artist_max_points_music_shows <- max_point_wins |> 
+  group_by(show_name.x, gender) |>
+  summarise(count = n(),
+            .groups = 'drop') |>
+  arrange(desc(count))
+
+ggplot(by_artist_max_points_music_shows, aes(fill = gender
+                 , y = count
+                 , x = show_name.x)) + 
+    geom_bar(position="dodge", stat="identity")
+```
+
+From the previous chart, we saw that females won more on Inkigayo and MCountdown; this persists here with the maximum score wins as well.
+
+## Conclusion
+
+Right from the start, data collection and cleaning wasn't the easiest. There was a constant need to go back to refresh the Google Sheet data due to typos, inconsistencies (the downside of having collected this data over so many years is that there were a few variations of how things were spelled/capitilized), and just minor adjustments due to romanization (there are many ways to type Korean names in English letters). Getting the two data sources to match up as well was quite taxing, but after many attempts of matching up the data, we finally got to parity (albeit some of the `idols` data is missing a few fields, but they weren't necessary for this analysis).
+
+Overall, we can take away a few points from the data exploration piece:
+
+-   BTS and Twice dominated the charts from 2016-2020 in terms of number of wins
+-   Group artists make up a majority of music show wins at \~70-80% per year
+-   While pretty much 50/50 on gender wins, there are certain music shows that seem biased towards specific genders (MCountdown and Inkigayo female, the rest male)
+- All but Inkigayo had a semblance of a normal points distribution
+-   Crown achievements have gone down over the years, perhaps due to the diversification of the industry (more groups debuting at a higher rate than before)
+
+There are several next steps to take with this project, including but not limited to:
+
+-   Including more years' worth of data in terms of wins and idol/group information
+-   Use more of the fields available; how many members are there on average in groups that win? Are there more prominent labels/companies that win more?
+-   Each of the point breakdowns that the shows use have changed over the years so applying that to the analysis (if expanding the daterange) could be interesting to see as well to visualize how distributions change due to the different methodologies
+- Including all songs that were promoted/eligible to win for every show and then taking a percentage of songs that won an award to compare amongst all the different artists (for example, I'd wager that 100% of Blackpink and BTS songs have won as almost every one of their tracks gets a win)
+
+This project has a lot to expand upon and it could be interesting to come back to this at some point in the future!
+
+## Sources
+
+-   [https://en.wikipedia.org/wiki/The_Show\_(South_Korean_TV_series)](https://en.wikipedia.org/wiki/The_Show_(South_Korean_TV_series)){.uri}
+-   <https://en.wikipedia.org/wiki/Show_Champion>
+-   <https://en.wikipedia.org/wiki/M_Countdown>
+-   <https://en.wikipedia.org/wiki/Show!_Music_Core>
+-   <https://en.wikipedia.org/wiki/Inkigayo>
+-   [https://en.wikipedia.org/wiki/Music_Bank\_(TV_series)](https://en.wikipedia.org/wiki/Music_Bank_(TV_series)){.uri}
