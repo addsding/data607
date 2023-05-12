@@ -52,7 +52,7 @@ South Korea has its own genre of music known as k-pop. Artists such as BTS and B
     -   30% Video Views (YouTube official MV views)
     -   10% Voting (5% pre-voting [before the show], 5% live voting [during the show])
 
-Almost every show has the concept of a "crown" (\* = triple crown, \*\* = quintuple crown) which denotes that once a song has won three or five times, it is ineligible from winning again.
+Almost every show has the concept of a "crown" (\* = triple crown, \*\* = quintuple crown) which denotes that once a song has won three or five times, it is ineligible from winning again. The quintuple crown wasn't implemented until 2021 for Show! Music Core though so it doesn't impact our analysis.
 
 Looking at music show wins from the 2016 - 2020, are there any trends in which artists dominated the charts during this time period or what types of artists (group, solo, male, female) typically won?
 
@@ -60,7 +60,7 @@ Looking at music show wins from the 2016 - 2020, are there any trends in which a
 
 This project utilizes two sources of data:
 
--   A Google sheet of scraped music show wins (all sourced from Wikipedia)
+-   A [Google](https://docs.google.com/spreadsheets/d/1rIjuuurAAIdeo00GTl8wKpIyntrVARHjWG_wy4tMu9I/edit#gid=355011202) sheet of scraped music show wins (all sourced from Wikipedia)
 -   A [Kaggle](https://www.kaggle.com/datasets/kimjihoo/kpopdb) dataset of individual idol names, boy groups, and girl groups
 
 The wins information mainly from Wikipedia includes the following information:
@@ -74,7 +74,7 @@ The wins information mainly from Wikipedia includes the following information:
 -   Solo or Group: Whether the `Artist` is a solo singer/performer or a group
 -   Full Name: Full name of the `Artist` if they're a solo performer
 -   Points: How many points the song received; every show has a different point system that takes into account fan voting, music video counts, album sales, digital sales, etc.
--   Crown: Whether this song achieved a triple/quintuple crown
+-   Crown: Whether this song achieved a triple crown
 
 The Kaggle tables hold the following relevant information
 
@@ -181,7 +181,9 @@ all_groups$debut_date <- as.Date(all_groups$debut_date, "%Y-%m-%d")
 head(all_groups)
 ```
 
-Next, we'll be taking subsets of the Wikipedia data to prep for joining. As we have one table (`all_groups`) holding group information and then one table (`idols`) for soloists, we'll have to eventually do two joins.
+Next, we'll be taking subsets of the Wikipedia data to prep for joining. As we have one table (`all_groups`) holding group information and then one table (`idols`) for soloists, we'll have to eventually do two joins. We're also making all the join columns lower case for simplicity.
+
+Note that `wins` had rows for days where there weren't shows being broadcasted or no winning song; by applying these filters in this section, we're removing these rows. This means that the ending dataframe will likely have less rows than the one we began with (`wins`).
 
 ```{r separate-wins}
 # make the artist name and group name info lower case
@@ -206,11 +208,9 @@ head(group_wins)
 
 ### Joining the Tables
 
-Note that `wins` had rows for days where there weren't shows being broadcasted or no winning song; by doing these joins in this section, we're removing these rows. This means that the ending dataframe will likely have less rows than the one we began with (`wins`).
-
 #### Group Wins
 
-With these two subsets created now, we'll start with `group_wins` -- this is joined to `all_groups` based on `artist_name`. For simplicity, let's change the case for all strings to lower in order to ensure that the join will work. This will be a left join with `group_wins` as the base and `all_groups` appending all its data.
+With these two subsets created now, we'll start with `group_wins` -- this is joined to `all_groups` based on `artist_name`. This will be a left join with `group_wins` as the base and `all_groups` appending all its data.
 
 ```{r group-win-join}
 group_wins_full <- group_wins |> left_join(all_groups, by = join_by(artist_name_lower == group_name_lower))
@@ -388,15 +388,15 @@ sum(is.na(solo_wins_full$stage_name))
 52 nulls -- who's missing?
 
 ```{r solo-join-na}
-head(solo_wins_full |> 
+solo_wins_full |> 
   group_by(artist_name) |>
   filter(is.na(stage_name)) |>
   summarise(count = n(),
             .groups = 'drop') |>
-  arrange(desc(count)))
+  summarise(count = n())
 ```
 
-As there are 22 missing artists here, I'll opt to add these directly to the idols .csv and reload that file. I'll also only be adding relevant data to avoid researching too many irrelevant things (birth place, birthday, etc.) before rejoining it to `solo_wins`.
+As there are 23 missing artists here, I'll opt to add these directly to the idols .csv and reload that file. I'll also only be adding relevant data to avoid researching too many irrelevant things (birth place, birthday, etc.) before rejoining it to `solo_wins`.
 
 ```{r idols-data}
 idols <- read.csv('https://raw.githubusercontent.com/addsding/data607/main/final%20project/kpop_idols_v2.csv')
@@ -432,7 +432,7 @@ No more nulls!
 
 Now let's join `debut_date` to the appropriate soloists (only if they're part of a group).
 
-```{r idols-company-debut}
+```{r idols--debut}
 solo_wins_full <- left_join(solo_wins_full
                             , all_groups |> select(group_name_lower, debut_date)
                             , by = c('group_name_for_soloists_lower' = 'group_name_lower')) |>
@@ -598,7 +598,7 @@ ggplot(by_artist_year, aes(fill = artist_name
     geom_bar(position="dodge", stat="identity")
 ```
 
-With this chart, we can kind of see the rise of some groups and the fall of others; EXO and GFRIEND had many more wins in 2016, but that number slowly dwindles as years pass. On the opposite side, BTS spikes in popularity in 2020 after a gradual increase past 20 wins before skyrocketing almost to 50. It's also interesting how we see Twice and Wanna One appear in 2017 with the latter disappearing after 2019 (this is due to Wanna One only being a temporary group) and the former slowly dwindling in popularity unfortunately as well. Other notable introductions are ITZY who debuted in 2019 and then BLACKPINK who have very little activity in the first three years, but then did very well in 2020.
+With this chart, we can kind of see the rise of some groups and the fall of others; EXO and GFRIEND had many more wins in 2016, but that number slowly dwindles as years pass. Twice follows this trend and spikes in 2017, but slowly starts decreasing in wins into 2020. On the opposite side, BTS spikes in popularity in 2020 after a gradual increase past 20 wins before skyrocketing almost to 50. It's also interesting how we Wanna One appears in 2017 and then disappears after 2019 (this is due to Wanna One only being a temporary group). Other notable introductions are ITZY who debuted in 2019 and then BLACKPINK who have very little activity in the first three years, but then did very well in 2020.
 
 ### Triple/Quintuple Crowns
 
@@ -620,7 +620,7 @@ ggplot(by_crown_year, aes(y = count
     geom_bar(position="dodge", stat="identity")
 ```
 
-Interestingly, we see an increase then sharp decrease over the years in songs rewarded crowns.
+Interestingly, we see an increase, then sharp decrease, then a spike in 2020. If we remember the artist count chart, there were more artists who won in 2019; it then makes sense that there were less crowns in 2019 as a more diverse amount of artists were winning.
 
 Who were the winners of these crowns? Let's start with groups.
 
@@ -870,9 +870,9 @@ Overall, we can take away a few points from the data exploration piece:
 
 -   BTS and Twice dominated the charts from 2016-2020 in terms of number of wins
 -   Group artists make up a majority of music show wins at \~70-80% per year
--   While pretty much 50/50 on gender wins, there are certain music shows that seem biased towards specific genders (MCountdown and Inkigayo female, the rest male)
+-   While pretty much 50/50 on gender wins, there are certain music shows that seem biased towards specific genders (MCountdown and Inkigayo female, the rest male); 2019 and 2020 has seen more of a skew towards female artists as well while 2016-2018 saw more male wins
 - All but Inkigayo had a semblance of a normal points distribution
--   Crown achievements have gone down over the years, perhaps due to the diversification of the industry (more groups debuting at a higher rate than before)
+- Wins tend to skew towards artists that are 1-5 years old, however there are a few more seniored artists that continue to do well
 
 There are several next steps to take with this project, including but not limited to:
 
